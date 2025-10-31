@@ -5,16 +5,13 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      # Only run if an image file is added or changed in the 'scores/' folder
       - 'scores/*.{png,jpg,jpeg,pdf}'
-  # Allows you to manually run the workflow from the Actions tab
   workflow_dispatch:
 
 jobs:
   convert_score:
     runs-on: ubuntu-latest
     
-    # Define variables for easier path management
     env:
       INPUT_DIR: scores
       OUTPUT_DIR: music_data
@@ -32,14 +29,10 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: 🧹 Create Output Directory and Input List
-        # Create output directory and list all scores for Audiveris
         run: |
           mkdir -p ${{ env.OUTPUT_DIR }}
-          # Create a file list using the correct path /input/score.png format
-          # This assumes the file is named IMG_3621.png, for example
           find ${{ env.INPUT_DIR }} -type f -regex ".*\.\(png\|jpg\|jpeg\|pdf\)" -printf '/input/%f\n' > input_files.txt
           
-          # Exit if no input files are found, preventing a useless run
           if ! [ -s input_files.txt ]; then
             echo "::warning::No score files found in 'scores/'. Skipping OMR step."
             exit 0
@@ -47,7 +40,6 @@ jobs:
           echo "Found scores to process."
 
       - name: 🎵 Run Audiveris (OMR to MusicXML) via Docker CLI 
-        # FINAL ATTEMPT: Using minimal command to force completion without complex options
         run: |
           echo "Starting OMR process using Audiveris Docker with minimal options..."
           docker run --rm \
@@ -62,21 +54,23 @@ jobs:
           echo "Audiveris OMR complete."
 
       - name: 🔎 Verify Audiveris Output
-        # DIAGNOSTIC STEP: Check if any .mxl files were created.
+        # FIX: Added recursive listing and check to find files inside subdirectories
         run: |
-          echo "Listing contents of ${{ env.OUTPUT_DIR }} after Audiveris run:"
-          ls -l ${{ env.OUTPUT_DIR }}
-          if [ -z "$(ls -A ${{ env.OUTPUT_DIR }}/*.mxl 2>/dev/null)" ]; then
-            echo "::error::Audiveris failed to generate any MusicXML (.mxl) files. The image or Docker configuration is still an issue."
+          echo "Listing contents of ${{ env.OUTPUT_DIR }} after Audiveris run (recursive check):"
+          ls -R ${{ env.OUTPUT_DIR }}
+          
+          if [ -z "$(find ${{ env.OUTPUT_DIR }} -name "*.mxl" -print -quit 2>/dev/null)" ]; then
+            echo "::error::Audiveris failed to generate any MusicXML (.mxl) files. Please check the log files that may be inside subdirectories."
+            exit 1 # Fail the job here if no MXL is found
           else
             echo "✅ MusicXML files found! Proceeding to MIDI conversion."
           fi
 
       - name: 🎼 Run MusicXML to MIDI Conversion (Python)
-        # Finds all generated .mxl files and converts them using the Python script
+        # FIX: Uses 'find' to recursively locate all .mxl files for processing
         run: |
           echo "Starting MusicXML to MIDI conversion..."
-          for XML_FILE in ${{ env.OUTPUT_DIR }}/*.mxl; do
+          find ${{ env.OUTPUT_DIR }} -name "*.mxl" | while read XML_FILE; do
             if [ -f "$XML_FILE" ]; then
               echo "Converting $XML_FILE to MIDI..."
               python scripts/xml_to_midi.py "$XML_FILE"
@@ -85,7 +79,7 @@ jobs:
           echo "Conversion complete."
 
       - name: ⬆️ Upload Generated MIDI/XML Files (as Artifact)
-        # Makes the generated files available to download directly from the GitHub Actions run
+        # Uploads all contents of the output directory, including sub-folders
         uses: actions/upload-artifact@v4
         with:
           name: converted-music-files
@@ -93,10 +87,10 @@ jobs:
           retention-days: 7
 
       - name: 🔄 Commit Generated Files
-        # Using the correct 'commit_options: --allow-empty' to prevent failure when no files are found.
+        # FIX: Uses **/*.{mxl,mid} to find files recursively within the music_data folder
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'ci: generate MusicXML and MIDI from new scores'
-          file_pattern: ${{ env.OUTPUT_DIR }}/*.{mxl,mid}
+          file_pattern: ${{ env.OUTPUT_DIR }}/**/*.{mxl,mid}
           skip_dirty_check: true
           commit_options: '--allow-empty'
