@@ -23,35 +23,36 @@ jobs:
       - name: ⬇️ Checkout Repository
         uses: actions/checkout@v4
         
-      - name: ⚙️ Install Python Dependencies
-        # Install the Python library 'music21' which we will use in a later step
-        run: pip install music21
+      - name: ⚙️ Set Up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: 📦 Install Python Dependencies
+        run: pip install -r requirements.txt
 
       - name: 🧹 Create Output Directory
         # Create a directory to store the MusicXML and MIDI outputs
         run: mkdir -p ${{ env.OUTPUT_DIR }}
 
-      - name: 🎵 Run Audiveris (OMR to MusicXML) via Docker
-        # Use a community-maintained Docker image with Audiveris pre-installed
-        # This is far more reliable than building Java/Gradle dependencies on the fly
-        uses: docker://toprock/audiveris:latest
-        with:
-          # Mount the scores and music_data folders to the container
-          args: >
-            /Audiveris/bin/Audiveris 
-            -batch 
-            -export 
-            -output /output 
-            -option org.audiveris.omr.sheet.BookManager.useSeparateBookFolders=false
+      - name: 🎵 Run Audiveris (OMR to MusicXML) via Docker CLI 
+        # The 'docker run' command explicitly mounts the directories, replacing the
+        # previous error-prone 'uses: docker://...' block with the invalid 'volumes:' keyword.
+        run: |
+          echo "Starting OMR process using Audiveris Docker..."
+          docker run --rm \
+            -v ${{ github.workspace }}/${{ env.INPUT_DIR }}:/input \
+            -v ${{ github.workspace }}/${{ env.OUTPUT_DIR }}:/output \
+            toprock/audiveris:latest \
+            /Audiveris/bin/Audiveris \
+            -batch \
+            -export \
+            -output /output \
+            -option org.audiveris.omr.sheet.BookManager.useSeparateBookFolders=false \
             /input/*.{png,jpg,jpeg,pdf}
-        # The volumes map the local directories to the container's /input and /output
-        # The Audiveris command inside the container will output MusicXML files 
-        # directly to the local 'music_data' folder.
-        volumes:
-          - ${{ github.workspace }}/${{ env.INPUT_DIR }}:/input
-          - ${{ github.workspace }}/${{ env.OUTPUT_DIR }}:/output
+          echo "Audiveris OMR complete."
 
-      - name: 🎼 Run MusicXML to MIDI Conversion
+      - name: 🎼 Run MusicXML to MIDI Conversion (Python)
         # Use a multi-line script to find all new MusicXML files and convert them
         run: |
           for XML_FILE in ${{ env.OUTPUT_DIR }}/*.mxl; do
@@ -61,12 +62,11 @@ jobs:
             fi
           done
 
-      - name: ⬆️ Upload Generated MIDI/XML Files
+      - name: ⬆️ Upload Generated MIDI/XML Files (as Artifact)
         uses: actions/upload-artifact@v4
         with:
           name: converted-music-files
           path: ${{ env.OUTPUT_DIR }}
-          # Keep only the generated MusicXML and MIDI files in the final commit/artifact
           retention-days: 7
 
       - name: 🔄 Commit Generated Files
@@ -75,5 +75,4 @@ jobs:
         with:
           commit_message: 'ci: generate MusicXML and MIDI from new scores'
           file_pattern: ${{ env.OUTPUT_DIR }}/*.{mxl,mid}
-          # This is important to allow pushing the generated files
           skip_dirty_check: true
