@@ -62,6 +62,17 @@ jobs:
             @/tmp/input_files.txt # Reads the list of files for processing
           echo "Audiveris OMR complete."
 
+      - name: 🔎 Verify Audiveris Output
+        # ADDED DIAGNOSTIC STEP: Check if any .mxl files were created.
+        run: |
+          echo "Listing contents of ${{ env.OUTPUT_DIR }} after Audiveris run:"
+          ls -l ${{ env.OUTPUT_DIR }}
+          if [ -z "$(ls -A ${{ env.OUTPUT_DIR }}/*.mxl 2>/dev/null)" ]; then
+            echo "::error::Audiveris failed to generate any MusicXML (.mxl) files. Check your input image!"
+          else
+            echo "✅ MusicXML files found! Proceeding to MIDI conversion."
+          fi
+
       - name: 🎼 Run MusicXML to MIDI Conversion (Python)
         # Finds all generated .mxl files and converts them using the Python script
         run: |
@@ -84,7 +95,7 @@ jobs:
           retention-days: 7
 
       - name: 🔄 Commit Generated Files
-        # FIX: Using the correct 'commit_options: --allow-empty' to prevent failure when no files are found.
+        # FINAL FIX: Using the correct 'commit_options: --allow-empty' to prevent failure.
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'ci: generate MusicXML and MIDI from new scores'
