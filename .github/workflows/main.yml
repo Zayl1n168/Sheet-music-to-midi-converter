@@ -43,14 +43,14 @@ jobs:
           echo "Found scores to process."
 
       - name: 🎵 Run Audiveris (OMR to MusicXML) via Docker CLI 
-        # FIX: Swapping to the more stable dvorak42/audiveris image
+        # FINAL FIX: Using the highly reliable 'chdickson/audiveris' image.
         run: |
-          echo "Starting OMR process using Audiveris Docker (dvorak42)..."
+          echo "Starting OMR process using Audiveris Docker (chdickson)..."
           docker run --rm \
             -v ${{ github.workspace }}/${{ env.INPUT_DIR }}:/input \
             -v ${{ github.workspace }}/${{ env.OUTPUT_DIR }}:/output \
             -v ${{ github.workspace }}/input_files.txt:/tmp/input_files.txt \
-            dvorak42/audiveris:latest \
+            chdickson/audiveris:latest \
             /audiveris-extract/bin/Audiveris \
             -batch \
             -output /output \
