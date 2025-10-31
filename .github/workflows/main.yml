@@ -36,15 +36,14 @@ jobs:
         run: mkdir -p ${{ env.OUTPUT_DIR }}
 
       - name: 🎵 Run Audiveris (OMR to MusicXML) via Docker CLI 
-        # The 'docker run' command explicitly mounts the directories, replacing the
-        # previous error-prone 'uses: docker://...' block with the invalid 'volumes:' keyword.
+        # FIX: Using 'docker run' for reliable volume mounting and corrected executable path.
         run: |
           echo "Starting OMR process using Audiveris Docker..."
           docker run --rm \
             -v ${{ github.workspace }}/${{ env.INPUT_DIR }}:/input \
             -v ${{ github.workspace }}/${{ env.OUTPUT_DIR }}:/output \
             toprock/audiveris:latest \
-            /Audiveris/bin/Audiveris \
+            /audiveris-extract/bin/Audiveris \
             -batch \
             -export \
             -output /output \
@@ -53,7 +52,7 @@ jobs:
           echo "Audiveris OMR complete."
 
       - name: 🎼 Run MusicXML to MIDI Conversion (Python)
-        # Use a multi-line script to find all new MusicXML files and convert them
+        # Finds all generated .mxl files and converts them using the Python script
         run: |
           for XML_FILE in ${{ env.OUTPUT_DIR }}/*.mxl; do
             if [ -f "$XML_FILE" ]; then
@@ -63,6 +62,7 @@ jobs:
           done
 
       - name: ⬆️ Upload Generated MIDI/XML Files (as Artifact)
+        # Makes the generated files available to download directly from the GitHub Actions run
         uses: actions/upload-artifact@v4
         with:
           name: converted-music-files
@@ -70,7 +70,7 @@ jobs:
           retention-days: 7
 
       - name: 🔄 Commit Generated Files
-        # Commit the new MusicXML and MIDI files back to the repository
+        # Commits the output MusicXML and MIDI files back to your repository
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'ci: generate MusicXML and MIDI from new scores'
