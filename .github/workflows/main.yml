@@ -36,7 +36,9 @@ jobs:
         run: mkdir -p ${{ env.OUTPUT_DIR }}
 
       - name: 🎵 Run Audiveris (OMR to MusicXML) via Docker CLI 
-        # FIX: Using 'docker run' for reliable volume mounting and corrected executable path.
+        # FIXES: 1) Uses 'docker run' for reliable volume mounting. 
+        #        2) Corrected executable path to /audiveris-extract/bin/Audiveris.
+        #        3) Corrected input path to simply /input.
         run: |
           echo "Starting OMR process using Audiveris Docker..."
           docker run --rm \
@@ -48,7 +50,7 @@ jobs:
             -export \
             -output /output \
             -option org.audiveris.omr.sheet.BookManager.useSeparateBookFolders=false \
-            /input/*.{png,jpg,jpeg,pdf}
+            /input # Passes the mounted input directory for batch processing
           echo "Audiveris OMR complete."
 
       - name: 🎼 Run MusicXML to MIDI Conversion (Python)
