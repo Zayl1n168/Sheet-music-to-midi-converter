@@ -46,7 +46,7 @@ jobs:
           echo "Found scores to process."
 
       - name: 🎵 Run Audiveris (OMR to MusicXML) via Docker CLI 
-        # FIX: Uses the list of files and the robust @/tmp/input_files.txt argument
+        # Uses the list of files and the robust @/tmp/input_files.txt argument
         run: |
           echo "Starting OMR process using Audiveris Docker..."
           docker run --rm \
@@ -84,10 +84,10 @@ jobs:
           retention-days: 7
 
       - name: 🔄 Commit Generated Files
-        # FIX: The 'allow_empty: true' flag prevents failure if no files were generated.
+        # FIX: Using the correct 'commit_options: --allow-empty' to prevent failure when no files are found.
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'ci: generate MusicXML and MIDI from new scores'
           file_pattern: ${{ env.OUTPUT_DIR }}/*.{mxl,mid}
           skip_dirty_check: true
-          allow_empty: true
+          commit_options: '--allow-empty'
