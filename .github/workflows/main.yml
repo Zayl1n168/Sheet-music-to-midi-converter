@@ -6,6 +6,7 @@ on:
     branches: [ "main" ]
     paths:
       - 'scores/*.{png,jpg,jpeg,pdf}'
+  # Allows you to manually run the workflow
   workflow_dispatch:
 
 jobs:
@@ -31,8 +32,10 @@ jobs:
       - name: 🧹 Create Output Directory and Input List
         run: |
           mkdir -p ${{ env.OUTPUT_DIR }}
+          # Create a file list using the correct path /input/score.png format
           find ${{ env.INPUT_DIR }} -type f -regex ".*\.\(png\|jpg\|jpeg\|pdf\)" -printf '/input/%f\n' > input_files.txt
           
+          # Exit if no input files are found
           if ! [ -s input_files.txt ]; then
             echo "::warning::No score files found in 'scores/'. Skipping OMR step."
             exit 0
@@ -40,13 +43,14 @@ jobs:
           echo "Found scores to process."
 
       - name: 🎵 Run Audiveris (OMR to MusicXML) via Docker CLI 
+        # FIX: Swapping to the more stable dvorak42/audiveris image
         run: |
-          echo "Starting OMR process using Audiveris Docker with minimal options..."
+          echo "Starting OMR process using Audiveris Docker (dvorak42)..."
           docker run --rm \
             -v ${{ github.workspace }}/${{ env.INPUT_DIR }}:/input \
             -v ${{ github.workspace }}/${{ env.OUTPUT_DIR }}:/output \
             -v ${{ github.workspace }}/input_files.txt:/tmp/input_files.txt \
-            toprock/audiveris:latest \
+            dvorak42/audiveris:latest \
             /audiveris-extract/bin/Audiveris \
             -batch \
             -output /output \
@@ -54,20 +58,20 @@ jobs:
           echo "Audiveris OMR complete."
 
       - name: 🔎 Verify Audiveris Output
-        # FIX: Added recursive listing and check to find files inside subdirectories
+        # Uses recursive check to find files inside subdirectories
         run: |
           echo "Listing contents of ${{ env.OUTPUT_DIR }} after Audiveris run (recursive check):"
           ls -R ${{ env.OUTPUT_DIR }}
           
           if [ -z "$(find ${{ env.OUTPUT_DIR }} -name "*.mxl" -print -quit 2>/dev/null)" ]; then
-            echo "::error::Audiveris failed to generate any MusicXML (.mxl) files. Please check the log files that may be inside subdirectories."
+            echo "::error::Audiveris failed to generate any MusicXML (.mxl) files."
             exit 1 # Fail the job here if no MXL is found
           else
             echo "✅ MusicXML files found! Proceeding to MIDI conversion."
           fi
 
       - name: 🎼 Run MusicXML to MIDI Conversion (Python)
-        # FIX: Uses 'find' to recursively locate all .mxl files for processing
+        # Uses 'find' to recursively locate all .mxl files for processing
         run: |
           echo "Starting MusicXML to MIDI conversion..."
           find ${{ env.OUTPUT_DIR }} -name "*.mxl" | while read XML_FILE; do
@@ -87,7 +91,7 @@ jobs:
           retention-days: 7
 
       - name: 🔄 Commit Generated Files
-        # FIX: Uses **/*.{mxl,mid} to find files recursively within the music_data folder
+        # Uses **/*.{mxl,mid} to find files recursively and uses --allow-empty
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'ci: generate MusicXML and MIDI from new scores'
