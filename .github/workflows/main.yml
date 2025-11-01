@@ -43,7 +43,7 @@ jobs:
           echo "Found scores to process."
 
       - name: 🎵 Run Audiveris (OMR to MusicXML) via Docker CLI 
-        # FIX: Reverting to the accessible 'toprock' image, adding memory, and forcing '-export' flag.
+        # FINAL COMMAND: Accessible image, memory fixed, export forced.
         run: |
           echo "Starting OMR process using Audiveris Docker (toprock, high memory, forcing export)..."
           docker run --rm \
@@ -60,7 +60,7 @@ jobs:
           echo "Audiveris OMR complete."
 
       - name: 📝 Display Audiveris Error Log
-        # This step finds the dynamically named log file inside the subdirectory and prints it.
+        # Displays the log file for diagnosis if OMR failed.
         run: |
           echo "Attempting to find and display the Audiveris log file for error diagnosis..."
           # Find the first file ending in .log recursively inside the output directory
@@ -75,20 +75,20 @@ jobs:
           fi
 
       - name: 🔎 Verify Audiveris Output
-        # Uses recursive check to find files inside subdirectories
+        # Checks for the essential .mxl file before conversion.
         run: |
           echo "Listing contents of ${{ env.OUTPUT_DIR }} after Audiveris run (recursive check):"
           ls -R ${{ env.OUTPUT_DIR }}
           
           if [ -z "$(find ${{ env.OUTPUT_DIR }} -name "*.mxl" -print -quit 2>/dev/null)" ]; then
-            echo "::error::Audiveris failed to generate any MusicXML (.mxl) files. Please check the log files above for Java errors."
+            echo "::error::Audiveris failed to generate any MusicXML (.mxl) files. Please check the log files above."
             exit 1 # Fail the job here if no MXL is found
           else
             echo "✅ MusicXML files found! Proceeding to MIDI conversion."
           fi
 
       - name: 🎼 Run MusicXML to MIDI Conversion (Python)
-        # Uses 'find' to recursively locate all .mxl files for processing
+        # Converts all found .mxl files to .mid files.
         run: |
           echo "Starting MusicXML to MIDI conversion..."
           find ${{ env.OUTPUT_DIR }} -name "*.mxl" | while read XML_FILE; do
@@ -100,18 +100,11 @@ jobs:
           echo "Conversion complete."
 
       - name: ⬆️ Upload Generated MIDI/XML Files (as Artifact)
-        # Uploads all contents of the output directory, including sub-folders
+        # Uploads all contents of the output directory (including the final .mid file)
         uses: actions/upload-artifact@v4
         with:
           name: converted-music-files
           path: ${{ env.OUTPUT_DIR }}
           retention-days: 7
-
-      - name: 🔄 Commit Generated Files
-        # Uses **/*.{mxl,mid} to find files recursively and uses --allow-empty
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: 'ci: generate MusicXML and MIDI from new scores'
-          file_pattern: ${{ env.OUTPUT_DIR }}/**/*.{mxl,mid}
-          skip_dirty_check: true
-          commit_options: '--allow-empty'
+          
+      # The commit step has been completely removed.
