@@ -43,9 +43,9 @@ jobs:
           echo "Found scores to process."
 
       - name: 🎵 Run Audiveris (OMR to MusicXML) via Docker CLI 
-        # FINAL FIX: Passing '-Xmx4g' correctly via the JAVA_TOOL_OPTIONS environment variable.
+        # FIX: Re-inserting the explicit '-export' flag to force MusicXML generation.
         run: |
-          echo "Starting OMR process using Audiveris Docker (toprock, high memory)..."
+          echo "Starting OMR process using Audiveris Docker (toprock, high memory, forcing export)..."
           docker run --rm \
             -v ${{ github.workspace }}/${{ env.INPUT_DIR }}:/input \
             -v ${{ github.workspace }}/${{ env.OUTPUT_DIR }}:/output \
@@ -55,6 +55,7 @@ jobs:
             /audiveris-extract/bin/Audiveris \
             -batch \
             -output /output \
+            -export \
             @/tmp/input_files.txt
           echo "Audiveris OMR complete."
 
