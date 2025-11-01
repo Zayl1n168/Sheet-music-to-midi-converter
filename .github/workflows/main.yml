@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 jobs:
- convert_score:
+  convert_score:
     runs-on: ubuntu-latest
     
     env:
@@ -57,7 +57,7 @@ jobs:
             @/tmp/input_files.txt
           echo "Audiveris OMR complete."
 
-    - name: 🔒 **ABSOLUTE PERMISSION FIX: Take Ownership** # This step fixes the "Permission denied" (Errno 13) error in the Python step.
+      - name: 🔒 **ABSOLUTE PERMISSION FIX: Take Ownership** # This single-line command resolves the final "Permission denied" (Errno 13) error.
         run: sudo chown -R $(id -u -n):$(id -g -n) ${{ env.OUTPUT_DIR }}
           
       - name: 📝 Display Audiveris Error Log
