@@ -57,7 +57,7 @@ jobs:
             @/tmp/input_files.txt
           echo "Audiveris OMR complete."
 
-      - name: 🔒 **ABSOLUTE PERMISSION FIX: Take Ownership** # Line 60 is here. This single-line run command fixes the final "Permission denied" error.
+      - name: 🔒 **ABSOLUTE PERMISSION FIX: Take Ownership** # This is the final working line for the permission fix.
         run: sudo chown -R $(id -u -n):$(id -g -n) ${{ env.OUTPUT_DIR }}
           
       - name: 📝 Display Audiveris Error Log
