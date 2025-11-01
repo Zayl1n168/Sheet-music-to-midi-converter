@@ -42,24 +42,24 @@ jobs:
           echo "Found scores to process."
 
       - name: 🎵 Run Audiveris (OMR to MusicXML) via Docker CLI 
-        # FIX: Using the > block style to avoid YAML syntax errors on complex shell commands.
-        run: >
-          echo "Starting OMR process using Audiveris Docker..." &&
-          docker run --rm 
-          -v ${{ github.workspace }}/${{ env.INPUT_DIR }}:/input 
-          -v ${{ github.workspace }}/${{ env.OUTPUT_DIR }}:/output 
-          -v ${{ github.workspace }}/input_files.txt:/tmp/input_files.txt 
-          -e JAVA_TOOL_OPTIONS='-Xmx4g' 
-          toprock/audiveris:latest 
-          /audiveris-extract/bin/Audiveris 
-          -batch 
-          -output /output 
-          -export 
-          @/tmp/input_files.txt &&
+        # FINAL FIX: Using the | operator for a clean, multi-line shell script.
+        run: |
+          echo "Starting OMR process using Audiveris Docker..."
+          docker run --rm \
+            -v ${{ github.workspace }}/${{ env.INPUT_DIR }}:/input \
+            -v ${{ github.workspace }}/${{ env.OUTPUT_DIR }}:/output \
+            -v ${{ github.workspace }}/input_files.txt:/tmp/input_files.txt \
+            -e JAVA_TOOL_OPTIONS='-Xmx4g' \
+            toprock/audiveris:latest \
+            /audiveris-extract/bin/Audiveris \
+            -batch \
+            -output /output \
+            -export \
+            @/tmp/input_files.txt
           echo "Audiveris OMR complete."
 
       - name: 🔒 **ABSOLUTE PERMISSION FIX: Take Ownership**
-        # FIX: Forcibly changes ownership of Docker-created files to the runner user.
+        # This step is the one that forces the host to own the files, resolving the Errno 13.
         run: |
           echo "Forcibly taking ownership of output files..."
           # $(whoami) is the most reliable way to get the current runner user.
