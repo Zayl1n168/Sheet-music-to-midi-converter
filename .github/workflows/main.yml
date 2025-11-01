@@ -42,7 +42,7 @@ jobs:
           echo "Found scores to process."
 
       - name: 🎵 Run Audiveris (OMR to MusicXML) via Docker CLI 
-        # FINAL FIX: Using the | operator for a clean, multi-line shell script.
+        # Using the standard pipe (|) for robust multi-line shell scripting.
         run: |
           echo "Starting OMR process using Audiveris Docker..."
           docker run --rm \
@@ -59,11 +59,11 @@ jobs:
           echo "Audiveris OMR complete."
 
       - name: 🔒 **ABSOLUTE PERMISSION FIX: Take Ownership**
-        # This step is the one that forces the host to own the files, resolving the Errno 13.
+        # Line 61 is likely here. Using $(id -u -n) is the most failsafe way to get the runner user.
         run: |
           echo "Forcibly taking ownership of output files..."
-          # $(whoami) is the most reliable way to get the current runner user.
-          sudo chown -R $(whoami):$(whoami) ${{ env.OUTPUT_DIR }}
+          # Fixes the Errno 13 Permission denied error in the Python step.
+          sudo chown -R $(id -u -n):$(id -g -n) ${{ env.OUTPUT_DIR }}
           echo "Ownership transfer complete."
           
       - name: 📝 Display Audiveris Error Log
