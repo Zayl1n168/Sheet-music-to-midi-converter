@@ -32,8 +32,6 @@ jobs:
       - name: 🧹 Create Output Directory and Input List
         run: |
           mkdir -p ${{ env.OUTPUT_DIR }}
-          # Create cache directory, required for the most reliable Docker fix
-          mkdir -p $HOME/.cache
           
           find ${{ env.INPUT_DIR }} -type f -regex ".*\.\(png\|jpg\|jpeg\|pdf\)" -printf '/input/%f\n' > input_files.txt
           
@@ -44,22 +42,30 @@ jobs:
           echo "Found scores to process."
 
       - name: 🎵 Run Audiveris (OMR to MusicXML) via Docker CLI 
-        # FINAL FIX: Reverted to stable image and implemented the only known permission fix 
-        # that allows subsequent steps to write files.
+        # Reverted to basic syntax to avoid crashing the OMR application.
         run: |
           echo "Starting OMR process using Audiveris Docker..."
-          # Running as host user (to fix permissions) and mounting the cache (to prevent Java crashes)
-          # Note: All arguments are on one line for reliable shell interpretation.
-          docker run --rm --user $(id -u) \
+          docker run --rm \
             -v ${{ github.workspace }}/${{ env.INPUT_DIR }}:/input \
             -v ${{ github.workspace }}/${{ env.OUTPUT_DIR }}:/output \
             -v ${{ github.workspace }}/input_files.txt:/tmp/input_files.txt \
-            -v $HOME/.cache:/root/.cache \
             -e JAVA_TOOL_OPTIONS='-Xmx4g' \
             toprock/audiveris:latest \
-            /audiveris-extract/bin/Audiveris -batch -output /output -export @/tmp/input_files.txt
+            /audiveris-extract/bin/Audiveris \
+            -batch \
+            -output /output \
+            -export \
+            @/tmp/input_files.txt
           echo "Audiveris OMR complete."
 
+      - name: 🔒 **ABSOLUTE PERMISSION FIX: Take Ownership**
+        # This step uses sudo to forcibly change the ownership of the output files
+        # from the Docker root user to the GitHub Actions runner user ($USER).
+        run: |
+          echo "Forcibly taking ownership of output files..."
+          sudo chown -R $USER:$USER ${{ env.OUTPUT_DIR }}
+          echo "Ownership transfer complete."
+          
       - name: 📝 Display Audiveris Error Log
         run: |
           LOG_FILE=$(find ${{ env.OUTPUT_DIR }} -name "*.log" -print -quit 2>/dev/null | head -n 1)
@@ -81,7 +87,7 @@ jobs:
           fi
           
       - name: 🎼 Run MusicXML to MIDI Conversion (Python)
-        # This step uses the fully-robust Python script you have (handling compression, encoding, and XML cleanup).
+        # This step will now have permission to write the final .mid file.
         run: |
           shopt -s globstar
           echo "Starting MusicXML to MIDI conversion..."
