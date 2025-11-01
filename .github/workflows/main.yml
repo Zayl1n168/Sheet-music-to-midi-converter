@@ -58,7 +58,7 @@ jobs:
             @/tmp/input_files.txt
           echo "Audiveris OMR complete."
 
-      - name: 🔒 **ABSOLUTE PERMISSION FIX: Take Ownership** # This line starts the new step and is aligned with all other steps.
+    - name: 🔒 **ABSOLUTE PERMISSION FIX: Take Ownership** # This line starts the new step and is aligned with all other steps.
         # This is the single-line command to fix the Errno 13 permission error.
         run: sudo chown -R $(id -u -n):$(id -g -n) ${{ env.OUTPUT_DIR }}
           
