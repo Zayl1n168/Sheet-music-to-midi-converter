@@ -57,7 +57,7 @@ jobs:
             @/tmp/input_files.txt
           echo "Audiveris OMR complete."
 
-      - name: 🔒 **ABSOLUTE PERMISSION FIX: Take Ownership** # This is the final working line for the permission fix.
+      - name: 🔒 **ABSOLUTE PERMISSION FIX: Take Ownership** # This is line 60, which must be perfectly aligned.
         run: sudo chown -R $(id -u -n):$(id -g -n) ${{ env.OUTPUT_DIR }}
           
       - name: 📝 Display Audiveris Error Log
