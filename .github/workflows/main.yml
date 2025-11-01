@@ -32,8 +32,9 @@ jobs:
       - name: 🧹 Create Output Directory and Input List
         run: |
           mkdir -p ${{ env.OUTPUT_DIR }}
-          # Create a cache directory and input list for the OMR run
-          mkdir -p $HOME/.cache 
+          # Create a cache directory to map to the container's expected location
+          mkdir -p /tmp/audiveris-cache 
+          
           find ${{ env.INPUT_DIR }} -type f -regex ".*\.\(png\|jpg\|jpeg\|pdf\)" -printf '/input/%f\n' > input_files.txt
           
           if ! [ -s input_files.txt ]; then
@@ -43,17 +44,15 @@ jobs:
           echo "Found scores to process."
 
       - name: 🎵 Run Audiveris (OMR to MusicXML) via Docker CLI 
-        # FINAL PERMISSION FIX: The '--user $(id -u)' ensures output files are owned by the host runner.
-        # The '-v $HOME/.cache:/root/.cache' mounts provide a safe place for Java to write temp files.
+        # ABSOLUTE FINAL FIX: Maps a known writable host directory (/tmp/audiveris-cache)
+        # to the container's problematic cache location (/root/.cache).
         run: |
           echo "Starting OMR process using Audiveris Docker..."
           docker run --rm \
-            --user $(id -u) \
             -v ${{ github.workspace }}/${{ env.INPUT_DIR }}:/input \
             -v ${{ github.workspace }}/${{ env.OUTPUT_DIR }}:/output \
             -v ${{ github.workspace }}/input_files.txt:/tmp/input_files.txt \
-            -v $HOME/.cache:/root/.cache \
-            -v /tmp:/tmp \
+            -v /tmp/audiveris-cache:/root/.cache \
             -e JAVA_TOOL_OPTIONS='-Xmx4g' \
             toprock/audiveris:latest \
             /audiveris-extract/bin/Audiveris \
@@ -84,7 +83,7 @@ jobs:
           fi
           
       - name: 🎼 Run MusicXML to MIDI Conversion (Python)
-        # Uses the fully-robust Python script (must be updated in the next step).
+        # This step uses the fully-robust Python script you have (handling compression, encoding, and XML cleanup).
         run: |
           shopt -s globstar
           echo "Starting MusicXML to MIDI conversion..."
