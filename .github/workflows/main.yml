@@ -58,7 +58,7 @@ jobs:
             @/tmp/input_files.txt
           echo "Audiveris OMR complete."
 
-      - name: 🔒 **ABSOLUTE PERMISSION FIX: Take Ownership**
+      - name: 🔒 ABSOLUTE PERMISSION FIX: Take Ownership
         # Line 61 is likely here. Using $(id -u -n) is the most failsafe way to get the runner user.
         run: |
           echo "Forcibly taking ownership of output files..."
