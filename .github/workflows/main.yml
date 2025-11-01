@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 jobs:
-convert_score:
+ convert_score:
     runs-on: ubuntu-latest
     
     env:
