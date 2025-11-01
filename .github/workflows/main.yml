@@ -41,10 +41,12 @@ jobs:
           echo "Found scores to process."
 
       - name: 🎵 Run Audiveris (OMR to MusicXML) via Docker CLI 
-        # Fixes: Correct memory syntax, accessible Docker image.
+        # FINAL FIX: --user $(id -u) forces the container to write files as the host user, 
+        # resolving all permission issues for subsequent steps.
         run: |
           echo "Starting OMR process using Audiveris Docker..."
           docker run --rm \
+            --user $(id -u) \
             -v ${{ github.workspace }}/${{ env.INPUT_DIR }}:/input \
             -v ${{ github.workspace }}/${{ env.OUTPUT_DIR }}:/output \
             -v ${{ github.workspace }}/input_files.txt:/tmp/input_files.txt \
@@ -59,7 +61,6 @@ jobs:
 
       - name: 📝 Display Audiveris Error Log
         run: |
-          # Displays the log file for error diagnosis.
           LOG_FILE=$(find ${{ env.OUTPUT_DIR }} -name "*.log" -print -quit 2>/dev/null | head -n 1)
           if [ -f "$LOG_FILE" ]; then
             echo "--- Audiveris Log ---"
@@ -78,15 +79,8 @@ jobs:
             echo "✅ MusicXML files found! Proceeding to MIDI conversion."
           fi
           
-      - name: 🔒 Fix Output Directory Permissions
-        # FINAL FIX: Ensures the host (Python) can write the .mid file into the Docker-created directory.
-        run: |
-          echo "Fixing file permissions..."
-          chmod -R 777 ${{ env.OUTPUT_DIR }}
-
       - name: 🎼 Run MusicXML to MIDI Conversion (Python)
-        # Fixes: Uses robust file search (globstar) and the updated Python script 
-        # (which handles encoding, compression, and XML prefix issues).
+        # This uses the fully-robust Python script you have (handling compression, encoding, and XML cleanup).
         run: |
           shopt -s globstar
           echo "Starting MusicXML to MIDI conversion..."
@@ -98,7 +92,6 @@ jobs:
           echo "Conversion complete."
 
       - name: ⬆️ Upload Generated MIDI/XML Files (as Artifact)
-        # Uploads all contents, including the final .mid file.
         uses: actions/upload-artifact@v4
         with:
           name: converted-music-files
