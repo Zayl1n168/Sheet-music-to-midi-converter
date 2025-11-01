@@ -42,7 +42,6 @@ jobs:
           echo "Found scores to process."
 
       - name: 🎵 Run Audiveris (OMR to MusicXML) via Docker CLI 
-        # Using the standard pipe (|) for robust multi-line shell scripting.
         run: |
           echo "Starting OMR process using Audiveris Docker..."
           docker run --rm \
@@ -58,8 +57,7 @@ jobs:
             @/tmp/input_files.txt
           echo "Audiveris OMR complete."
 
-    - name: 🔒 **ABSOLUTE PERMISSION FIX: Take Ownership** # This line starts the new step and is aligned with all other steps.
-        # This is the single-line command to fix the Errno 13 permission error.
+      - name: 🔒 **ABSOLUTE PERMISSION FIX: Take Ownership** # This step fixes the "Permission denied" (Errno 13) error in the Python step.
         run: sudo chown -R $(id -u -n):$(id -g -n) ${{ env.OUTPUT_DIR }}
           
       - name: 📝 Display Audiveris Error Log
@@ -83,7 +81,6 @@ jobs:
           fi
           
       - name: 🎼 Run MusicXML to MIDI Conversion (Python)
-        # The Python script (which handles compression, encoding, and XML cleanup) will now have permission to write the final file.
         run: |
           shopt -s globstar
           echo "Starting MusicXML to MIDI conversion..."
