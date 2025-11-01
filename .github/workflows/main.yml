@@ -58,13 +58,9 @@ jobs:
             @/tmp/input_files.txt
           echo "Audiveris OMR complete."
 
-      - name: 🔒 ABSOLUTE PERMISSION FIX: Take Ownership
-        # Line 61 is likely here. Using $(id -u -n) is the most failsafe way to get the runner user.
-        run: |
-          echo "Forcibly taking ownership of output files..."
-          # Fixes the Errno 13 Permission denied error in the Python step.
-          sudo chown -R $(id -u -n):$(id -g -n) ${{ env.OUTPUT_DIR }}
-          echo "Ownership transfer complete."
+      - name: 🔒 **ABSOLUTE PERMISSION FIX: Take Ownership** # This line starts the new step and is aligned with all other steps.
+        # This is the single-line command to fix the Errno 13 permission error.
+        run: sudo chown -R $(id -u -n):$(id -g -n) ${{ env.OUTPUT_DIR }}
           
       - name: 📝 Display Audiveris Error Log
         run: |
