@@ -6,26 +6,24 @@ import music21 as m21
 def convert_xml_to_midi(xml_file_path):
     # 1. Read the raw file content
     try:
-        with open(xml_file_path, 'r', encoding='utf-8') as f:
+        # FIX: Changed encoding to 'latin-1' to handle non-UTF-8 bytes written by Audiveris.
+        with open(xml_file_path, 'r', encoding='latin-1') as f:
             xml_string = f.read()
     except Exception as e:
         print(f"   ❌ Error reading XML file: {e}")
         return
 
     # 2. Clean XML: Remove unbound namespace prefixes (e.g., 'scl:', 'xlink:')
-    # This is a robust regex fix for the "unbound prefix" error from OMR tools.
+    # This addresses the previous "unbound prefix" error.
     
     # Remove prefix from element tags (e.g., <scl:tag -> <tag)
-    # The regex looks for '<' followed by a group of characters and a colon, and replaces the group and colon.
     xml_string = re.sub(r'<\/?([a-zA-Z0-9]+):', r'<\/?', xml_string)
     
     # Remove prefix from attributes (e.g., scl:attribute="val" -> attribute="val")
-    # This regex looks for a space, then a prefix, and replaces the prefix and colon.
     xml_string = re.sub(r' ([a-zA-Z0-9]+):([a-zA-Z0-9]+)=', r' \2=', xml_string)
     
     try:
         # 3. Parse the cleaned string directly with music21
-        # We pass the cleaned string and tell the parser it's MusicXML format.
         score = m21.converter.parse(xml_string, format='musicxml')
 
         # 4. Write the MIDI file
