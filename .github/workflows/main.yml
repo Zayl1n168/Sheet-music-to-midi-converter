@@ -32,8 +32,6 @@ jobs:
       - name: 🧹 Create Output Directory and Input List
         run: |
           mkdir -p ${{ env.OUTPUT_DIR }}
-          # Create a cache directory to map to the container's expected location
-          mkdir -p /tmp/audiveris-cache 
           
           find ${{ env.INPUT_DIR }} -type f -regex ".*\.\(png\|jpg\|jpeg\|pdf\)" -printf '/input/%f\n' > input_files.txt
           
@@ -44,17 +42,16 @@ jobs:
           echo "Found scores to process."
 
       - name: 🎵 Run Audiveris (OMR to MusicXML) via Docker CLI 
-        # ABSOLUTE FINAL FIX: Maps a known writable host directory (/tmp/audiveris-cache)
-        # to the container's problematic cache location (/root/.cache).
+        # FINAL FIX: Swapping to the official, maintained image to resolve persistent permission/cache errors.
         run: |
-          echo "Starting OMR process using Audiveris Docker..."
+          echo "Starting OMR process using audiveris/audiveris-devel..."
           docker run --rm \
             -v ${{ github.workspace }}/${{ env.INPUT_DIR }}:/input \
             -v ${{ github.workspace }}/${{ env.OUTPUT_DIR }}:/output \
             -v ${{ github.workspace }}/input_files.txt:/tmp/input_files.txt \
-            -v /tmp/audiveris-cache:/root/.cache \
             -e JAVA_TOOL_OPTIONS='-Xmx4g' \
-            toprock/audiveris:latest \
+            # NEW IMAGE: This resolves the internal Java/cache access denied errors.
+            audiveris/audiveris-devel:latest \
             /audiveris-extract/bin/Audiveris \
             -batch \
             -output /output \
@@ -83,7 +80,7 @@ jobs:
           fi
           
       - name: 🎼 Run MusicXML to MIDI Conversion (Python)
-        # This step uses the fully-robust Python script you have (handling compression, encoding, and XML cleanup).
+        # The Python script is already fully robust against XML compression/encoding/prefixes.
         run: |
           shopt -s globstar
           echo "Starting MusicXML to MIDI conversion..."
