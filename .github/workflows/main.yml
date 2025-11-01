@@ -43,18 +43,18 @@ jobs:
           echo "Found scores to process."
 
       - name: 🎵 Run Audiveris (OMR to MusicXML) via Docker CLI 
-        # FIX: Reverting to the accessible 'toprock' image and increasing Java heap size (memory) to prevent crashes.
+        # FINAL FIX: Passing '-Xmx4g' correctly via the JAVA_TOOL_OPTIONS environment variable.
         run: |
           echo "Starting OMR process using Audiveris Docker (toprock, high memory)..."
           docker run --rm \
             -v ${{ github.workspace }}/${{ env.INPUT_DIR }}:/input \
             -v ${{ github.workspace }}/${{ env.OUTPUT_DIR }}:/output \
             -v ${{ github.workspace }}/input_files.txt:/tmp/input_files.txt \
+            -e JAVA_TOOL_OPTIONS='-Xmx4g' \
             toprock/audiveris:latest \
             /audiveris-extract/bin/Audiveris \
             -batch \
             -output /output \
-            -J-Xmx4g \
             @/tmp/input_files.txt
           echo "Audiveris OMR complete."
 
