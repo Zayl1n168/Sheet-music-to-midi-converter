@@ -43,7 +43,7 @@ jobs:
           echo "Found scores to process."
 
       - name: 🎵 Run Audiveris (OMR to MusicXML) via Docker CLI 
-        # FIX: Re-inserting the explicit '-export' flag to force MusicXML generation.
+        # FIX: Reverting to the accessible 'toprock' image, adding memory, and forcing '-export' flag.
         run: |
           echo "Starting OMR process using Audiveris Docker (toprock, high memory, forcing export)..."
           docker run --rm \
@@ -59,6 +59,21 @@ jobs:
             @/tmp/input_files.txt
           echo "Audiveris OMR complete."
 
+      - name: 📝 Display Audiveris Error Log
+        # This step finds the dynamically named log file inside the subdirectory and prints it.
+        run: |
+          echo "Attempting to find and display the Audiveris log file for error diagnosis..."
+          # Find the first file ending in .log recursively inside the output directory
+          LOG_FILE=$(find ${{ env.OUTPUT_DIR }} -name "*.log" -print -quit 2>/dev/null | head -n 1)
+          
+          if [ -f "$LOG_FILE" ]; then
+            echo "--- Contents of Audiveris Log File ($LOG_FILE) ---"
+            cat "$LOG_FILE"
+            echo "----------------------------------------------------"
+          else
+            echo "::warning::Audiveris log file not found. Skipping log display."
+          fi
+
       - name: 🔎 Verify Audiveris Output
         # Uses recursive check to find files inside subdirectories
         run: |
@@ -66,7 +81,7 @@ jobs:
           ls -R ${{ env.OUTPUT_DIR }}
           
           if [ -z "$(find ${{ env.OUTPUT_DIR }} -name "*.mxl" -print -quit 2>/dev/null)" ]; then
-            echo "::error::Audiveris failed to generate any MusicXML (.mxl) files. Please check the log files inside the subdirectories for Java errors."
+            echo "::error::Audiveris failed to generate any MusicXML (.mxl) files. Please check the log files above for Java errors."
             exit 1 # Fail the job here if no MXL is found
           else
             echo "✅ MusicXML files found! Proceeding to MIDI conversion."
