@@ -13,15 +13,11 @@ def get_xml_string(file_path):
     try:
         if ext.lower() == '.mxl':
             # It's a compressed MusicXML file (ZIP format)
-            # We read the binary file content first
             with open(file_path, 'rb') as f:
                 mxl_bytes = io.BytesIO(f.read())
             
             with zipfile.ZipFile(mxl_bytes, 'r') as z:
-                # MusicXML standard requires the core file to be referenced in META-INF/container.xml
-                # But it is often simply the name of the file (e.g., score.xml or score.musicxml)
-                
-                # We prioritize the largest file (which is almost always the music data)
+                # Prioritize the largest file (which is almost always the music data)
                 largest_file_name = None
                 largest_file_size = -1
                 
@@ -44,7 +40,6 @@ def get_xml_string(file_path):
                 xml_string = f.read()
 
     except Exception as e:
-        # Re-raise the exception with context
         raise IOError(f"Error reading file '{file_path}': {e}")
         
     return xml_string
@@ -57,10 +52,7 @@ def convert_xml_to_midi(xml_file_path):
         xml_string = get_xml_string(xml_file_path)
 
         # 2. Clean XML: Remove unbound namespace prefixes (critical fix for Audiveris output)
-        # Remove prefix from element tags (e.g., <scl:tag -> <tag)
         xml_string = re.sub(r'<\/?([a-zA-Z0-9]+):', r'<\/?', xml_string)
-        
-        # Remove prefix from attributes (e.g., scl:attribute="val" -> attribute="val")
         xml_string = re.sub(r' ([a-zA-Z0-9]+):([a-zA-Z0-9]+)=', r' \2=', xml_string)
         
         # 3. Parse the cleaned string
