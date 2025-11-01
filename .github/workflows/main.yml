@@ -43,17 +43,18 @@ jobs:
           echo "Found scores to process."
 
       - name: 🎵 Run Audiveris (OMR to MusicXML) via Docker CLI 
-        # FINAL FIX: Using the highly reliable 'chdickson/audiveris' image.
+        # FIX: Reverting to the accessible 'toprock' image and increasing Java heap size (memory) to prevent crashes.
         run: |
-          echo "Starting OMR process using Audiveris Docker (chdickson)..."
+          echo "Starting OMR process using Audiveris Docker (toprock, high memory)..."
           docker run --rm \
             -v ${{ github.workspace }}/${{ env.INPUT_DIR }}:/input \
             -v ${{ github.workspace }}/${{ env.OUTPUT_DIR }}:/output \
             -v ${{ github.workspace }}/input_files.txt:/tmp/input_files.txt \
-            chdickson/audiveris:latest \
+            toprock/audiveris:latest \
             /audiveris-extract/bin/Audiveris \
             -batch \
             -output /output \
+            -J-Xmx4g \
             @/tmp/input_files.txt
           echo "Audiveris OMR complete."
 
@@ -64,7 +65,7 @@ jobs:
           ls -R ${{ env.OUTPUT_DIR }}
           
           if [ -z "$(find ${{ env.OUTPUT_DIR }} -name "*.mxl" -print -quit 2>/dev/null)" ]; then
-            echo "::error::Audiveris failed to generate any MusicXML (.mxl) files."
+            echo "::error::Audiveris failed to generate any MusicXML (.mxl) files. Please check the log files inside the subdirectories for Java errors."
             exit 1 # Fail the job here if no MXL is found
           else
             echo "✅ MusicXML files found! Proceeding to MIDI conversion."
