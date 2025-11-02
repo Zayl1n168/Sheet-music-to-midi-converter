@@ -12,36 +12,34 @@ on:
 jobs:
   convert_score:
     runs-on: ubuntu-latest
-    
+
     env:
       INPUT_DIR: scores
       OUTPUT_DIR: music_data
 
     steps:
-      - name: ⬇️ Checkout Repository
+      - name: "⬇️ Checkout Repository"
         uses: actions/checkout@v4
-        
-      - name: ⚙️ Set Up Python
+
+      - name: "⚙️ Set Up Python"
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      - name: 📦 Install Python Dependencies
+      - name: "📦 Install Python Dependencies"
         run: pip install -r requirements.txt
 
-      - name: 🧹 Create Output Directory and Input List
+      - name: "🧹 Create Output Directory and Input List"
         run: |
           mkdir -p ${{ env.OUTPUT_DIR }}
-          
           find ${{ env.INPUT_DIR }} -type f -regex ".*\.\(png\|jpg\|jpeg\|pdf\)" -printf '/input/%f\n' > input_files.txt
-          
           if ! [ -s input_files.txt ]; then
             echo "::warning::No score files found in 'scores/'. Skipping OMR step."
             exit 0
           fi
           echo "Found scores to process."
 
-      - name: 🎵 Run Audiveris (OMR to MusicXML) via Docker CLI 
+      - name: "🎵 Run Audiveris (OMR to MusicXML) via Docker CLI"
         run: |
           echo "Starting OMR process using Audiveris Docker..."
           docker run --rm \
@@ -57,41 +55,41 @@ jobs:
             @/tmp/input_files.txt
           echo "Audiveris OMR complete."
 
-      - name: 🔒 **ABSOLUTE PERMISSION FIX: Take Ownership** # This is line 60, which must be perfectly aligned.
-        run: sudo chown -R $(id -u -n):$(id -g -n) ${{ env.OUTPUT_DIR }}
-          
-      - name: 📝 Display Audiveris Error Log
+      - name: "🔒 ABSOLUTE PERMISSION FIX: Take Ownership"
+        run: sudo chown -R "$(id -u -n):$(id -g -n)" "${{ env.OUTPUT_DIR }}"
+
+      - name: "📝 Display Audiveris Error Log"
         run: |
-          LOG_FILE=$(find ${{ env.OUTPUT_DIR }} -name "*.log" -print -quit 2>/dev/null | head -n 1)
+          LOG_FILE=$(find "${{ env.OUTPUT_DIR }}" -name "*.log" -print -quit 2>/dev/null | head -n 1)
           if [ -f "$LOG_FILE" ]; then
             echo "--- Audiveris Log ---"
             cat "$LOG_FILE"
             echo "---------------------"
           fi
 
-      - name: 🔎 Verify Audiveris Output
+      - name: "🔎 Verify Audiveris Output"
         run: |
           echo "Listing contents of ${{ env.OUTPUT_DIR }} (recursive check):"
-          ls -R ${{ env.OUTPUT_DIR }}
-          if [ -z "$(find ${{ env.OUTPUT_DIR }} -name "*.mxl" -print -quit 2>/dev/null)" ]; then
+          ls -R "${{ env.OUTPUT_DIR }}"
+          if [ -z "$(find "${{ env.OUTPUT_DIR }}" -name "*.mxl" -print -quit 2>/dev/null)" ]; then
             echo "::error::Audiveris failed to generate any MusicXML (.mxl) files."
             exit 1
           else
             echo "✅ MusicXML files found! Proceeding to MIDI conversion."
           fi
-          
-      - name: 🎼 Run MusicXML to MIDI Conversion (Python)
+
+      - name: "🎼 Run MusicXML to MIDI Conversion (Python)"
         run: |
           shopt -s globstar
           echo "Starting MusicXML to MIDI conversion..."
-          for XML_FILE in ${{ env.OUTPUT_DIR }}/**/*.mxl; do
+          for XML_FILE in "${{ env.OUTPUT_DIR }}"/**/*.mxl; do
             if [ -f "$XML_FILE" ]; then
               python scripts/xml_to_midi.py "$XML_FILE"
             fi
           done
           echo "Conversion complete."
 
-      - name: ⬆️ Upload Generated MIDI/XML Files (as Artifact)
+      - name: "⬆️ Upload Generated MIDI/XML Files (as Artifact)"
         uses: actions/upload-artifact@v4
         with:
           name: converted-music-files
